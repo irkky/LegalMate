@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LegalMate Document Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2A5C82;
+      --accent: #FF6B6B;
+      --light: #F8F9FA;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--light);
+      min-height: 100vh;
+      padding: 2rem;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 2.5rem;
+      position: relative;
+    }
+
+    h1::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 3px;
+      background: var(--accent);
+      margin: 0.5rem auto;
+      border-radius: 2px;
+    }
+
+    .upload-area {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      margin-bottom: 2rem;
+      transition: var(--transition);
+    }
+
+    .upload-area.dragover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+      border-color: var(--primary);
+    }
+
+    .upload-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .file-input {
+      border: 2px dashed #ddd;
+      padding: 2rem;
+      text-align: center;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .file-input:hover {
+      border-color: var(--primary);
+      background: rgba(42, 92, 130, 0.05);
+    }
+
+    .selected-file {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: var(--primary);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 1rem;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .doc-list {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .doc-item {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      animation: slideIn 0.4s ease-out;
+      transition: var(--transition);
+    }
+
+    .doc-item:hover {
+      transform: translateX(4px);
+    }
+
+    .doc-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .doc-info h3 {
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .doc-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .doc-actions button {
+      padding: 0.5rem 1rem;
+      background: var(--accent);
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(2px);
+      animation: fadeIn 0.3s;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    .modal-content {
+      background: white;
+      margin: 2rem auto;
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 600px;
+      animation: slideUp 0.4s ease-out;
+      position: relative;
+    }
+
+    .modal-section {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #eee;
+    }
+
+    .modal-section h3 {
+      margin-bottom: 1rem;
+      color: var(--primary);
+      font-size: 1.1rem;
+    }
+
+    .text-preview {
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 1rem;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid #eee;
+      white-space: pre-wrap;
+    }
+
+    .skeleton {
+      background: #eee;
+      border-radius: 4px;
+      animation: pulse 1.5s infinite;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+      
+      .doc-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .modal-content {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📁 LegalMate</h1>
+    
+    <div class="upload-area" id="uploadArea">
+      <form id="uploadForm" class="upload-form">
+        <label class="file-input">
+          <input type="file" id="fileInput" hidden accept=".pdf,.docx">
+          <span>📤 Drag & drop or click to upload</span>
+          <span class="selected-file" id="selectedFile"></span>
+        </label>
+        <button type="submit" id="uploadButton">
+          <span class="button-text">Upload Document</span>
+          <div class="loading" hidden></div>
+        </button>
+      </form>
+    </div>
+
+    <div id="message" class="message"></div>
+    
+    <div class="doc-list" id="docList">
+      <div class="doc-item skeleton" style="height: 80px"></div>
+      <div class="doc-item skeleton" style="height: 80px"></div>
+    </div>
+  </div>
+
+  <div id="docModal" class="modal">
+    <div class="modal-content">
+      <button id="closeModal" style="position: absolute; top: 1rem; right: 1rem; background: none; color: #666">✕</button>
+      <div id="docDetails" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    const _u = 'http://localhost:5000';
+    let _t = 0;
+
+    const _a = document.getElementById('uploadArea');
+    const _b = document.getElementById('uploadButton');
+    const _l = _b.querySelector('.loading');
+    const _x = _b.querySelector('.button-text');
+    const _f = document.getElementById('fileInput');
+    const _s = document.getElementById('selectedFile');
+    const _dl = document.getElementById('docList');
+    const _dm = document.getElementById('docModal');
+    const _dd = document.getElementById('docDetails');
+
+    _f.addEventListener('change', () => {
+      if (_f.files.length > 0) {
+        _s.textContent = _f.files[0].name;
+      } else {
+        _s.textContent = '';
+      }
+    });
+
+    _a.addEventListener('dragover', (evt) => {
+      evt.preventDefault();
+      _a.classList.add('dragover');
+    });
+
+    _a.addEventListener('dragleave', () => {
+      _a.classList.remove('dragover');
+    });
+
+    _a.addEventListener('drop', (evt) => {
+      evt.preventDefault();
+      _a.classList.remove('dragover');
+      const fls = evt.dataTransfer.files;
+      if (fls.length) {
+        _f.files = fls;
+        _s.textContent = fls[0].name;
+      }
+    });
+
+    uploadForm.addEventListener('submit', async (evt) => {
+      evt.preventDefault();
+      const fl = _f.files[0];
+      if (!fl) return;
+
+      _x.hidden = true;
+      _l.hidden = false;
+      _b.disabled = true;
+
+      try {
+        const fd = new FormData();
+        fd.append('file', fl);
+
+        const rs = await fetch(_u + '/documents', {
+          method: 'POST',
+          body: fd
+        });
+
+        if (!rs.ok) throw new Error('Upload failed');
+        
+        _sm('Document uploaded successfully!');
+        _f.value = '';
+        _s.textContent = '';
+        await _ld();
+      } catch (er) {
+        _sm(er.message, true);
+      } finally {
+        _x.hidden = false;
+        _l.hidden = true;
+        _b.disabled = false;
+      }
+    });
+
+    async function _ld() {
+      try {
+        const rs = await fetch(_u + '/documents?page=1&limit=100');
+        const rt = await rs.json();
+        _rd(rt?.data || []);
+      } catch (er) {
+        _sm('Error loading documents', true);
+      }
+    }
+
+    function _rd(docs) {
+      _dl.innerHTML = docs.length ? docs.map(d => `
+        <div class="doc-item" data-doc-id="${d.id}">
+          <div class="doc-info">
+            <h3>${d.filename}</h3>
+            <p>Uploaded: ${new Date(d.upload_date).toLocaleDateString()}</p>
+            <p>Status: ${d.status}</p>
+          </div>
+          <div class="doc-actions">
+            <button onclick="_vd('${d.id}')">View</button>
+            <button class="delete" onclick="_ddf('${d.id}')">Delete</button>
+          </div>
+        </div>
+      `).join('') : '<p style="text-align:center">No documents found</p>';
+    }
+
+    async function _vd(id) {
+      try {
+        const rs = await fetch(_u + '/documents/' + id);
+        const d = await rs.json();
+        
+        _dd.innerHTML = `
+          <div class="modal-section">
+            <h3>Document Details</h3>
+            <p><strong>Filename:</strong> ${d.filename}</p>
+            <p><strong>Uploaded:</strong> ${new Date(d.upload_date).toLocaleString()}</p>
+            <p><strong>Status:</strong> ${d.status}</p>
+          </div>
+
+          <div class="modal-section">
+            <h3>Summary</h3>
+            <p>${d.analysis?.summary || 'No summary available'}</p>
+          </div>
+
+          <div class="modal-section">
+            <h3>Key Risks</h3>
+            <ul>${(d.analysis?.risks || []).map(rsk => `<li>${rsk}</li>`).join('') || 'No risks identified'}</ul>
+          </div>
+
+          <div class="modal-section">
+            <h3>Important Clauses</h3>
+            <ul>${(d.analysis?.clauses || []).map(cls => `<li>${cls}</li>`).join('') || 'No clauses identified'}</ul>
+          </div>
+
+          <div class="modal-section">
+            <h3>Full Text</h3>
+            <div class="text-preview">${d.text || 'No text available'}</div>
+          </div>
+        `;
+        
+        _dm.style.display = 'block';
+      } catch (er) {
+        _sm('Error loading document details', true);
+      }
+    }
+
+    function _cm() {
+      _dm.style.display = 'none';
+    }
+
+    document.getElementById('closeModal').addEventListener('click', _cm);
+    window.addEventListener('click', (evt) => {
+      if (evt.target === _dm) {
+        _cm();
+      }
+    });
+
+    async function _ddf(id) {
+      if (!confirm('Are you sure you want to delete this document?')) return;
+      try {
+        const rs = await fetch(_u + '/documents/' + id, { method: 'DELETE' });
+        if (rs.status === 204) {
+          _sm('Document deleted');
+          document.querySelector(`[data-doc-id="${id}"]`)?.remove();
+        } else {
+           _sm(`Delete failed: ${rs.statusText}`, true);
+        }
+      } catch (er) {
+        _sm('Delete failed', true);
+      }
+    }
+
+    function _sm(txt, isE = false) {
+      const _md = document.getElementById('message');
+      _md.textContent = txt;
+      _md.style.color = isE ? '#e53935' : '#4caf50';
+      _md.style.padding = '1rem';
+      _md.style.borderRadius = '8px';
+      _md.style.backgroundColor = isE ? '#ffeeed' : '#f0fff4';
+      _md.style.margin = '1rem 0';
+      _md.style.textAlign = 'center';
+      
+      setTimeout(() => {
+        _md.textContent = '';
+        _md.style.backgroundColor = 'transparent';
+      }, 3000);
+    }
+
+    _ld();
+  </script>
+</body>
+</html>
