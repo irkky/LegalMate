@@ -1,0 +1,9 @@
+Flask
+flask-cors
+pymongo
+PyPDF2
+python-docx
+spacy
+transformers
+werkzeug
+torch
